@@ -3,22 +3,21 @@ from sqlmodel import SQLModel, Session, create_engine, select
 from pydantic import BaseModel
 from typing import List
 import hashlib
-import os
+from sqlmodel import Field
 
 # Database setup
 database_url = "sqlite:///./cache.db"
 engine = create_engine(database_url, echo=True)
 
 class CachedResult(SQLModel, table=True):
-    id: int | None = None
+    id: int = Field(default=None, primary_key=True)
     input_string: str
     transformed_string: str
 
 class Payload(SQLModel, table=True):
-    id: int | None = None
+    id: int = Field(default=None, primary_key=True)
     identifier: str
     output: str
-
 SQLModel.metadata.create_all(engine)
 
 def get_session():
@@ -29,7 +28,7 @@ app = FastAPI()
 
 # Transformer function (Simulating an external service)
 def transformer_function(input_string: str) -> str:
-    pass
+    return input_string.upper()
 
 # Request Model
 class PayloadRequest(BaseModel):
@@ -39,7 +38,14 @@ class PayloadRequest(BaseModel):
 
 # Caching function
 def get_or_cache_transformation(input_string: str, session: Session) -> str:
-    pass
+    existing_entry = session.exec(select(CachedResult).where(CachedResult.input_string == input_string)).first()
+    if existing_entry:
+        return existing_entry.transformed_string
+    transformed_string = transformer_function(input_string)
+    new_entry = CachedResult(input_string=input_string, transformed_string=transformed_string)
+    session.add(new_entry)
+    session.commit()
+    return transformed_string
 
 @app.post("/payload")
 def create_payload(request: PayloadRequest, session: Session = Depends(get_session)):
@@ -67,3 +73,7 @@ def read_payload(identifier: str, session: Session = Depends(get_session)):
     if not payload:
         raise HTTPException(status_code=404, detail="Payload not found.")
     return {"output": payload.output}
+
+
+if __name__ == "__main__":
+    print(1)
