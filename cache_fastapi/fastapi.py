@@ -43,8 +43,27 @@ def get_or_cache_transformation(input_string: str, session: Session) -> str:
 
 @app.post("/payload")
 def create_payload(request: PayloadRequest, session: Session = Depends(get_session)):
-    pass
+    if len(request.list_1) != len(request.list_2):
+        raise HTTPException(status_code=400, detail="Lists must be of the same length.")
+    
+    transformed_1 = [get_or_cache_transformation(s, session) for s in request.list_1]
+    transformed_2 = [get_or_cache_transformation(s, session) for s in request.list_2]
+    
+    interleaved_result = ", ".join(sum(zip(transformed_1, transformed_2), ()))
+    identifier = hashlib.md5(interleaved_result.encode()).hexdigest()
+    
+    existing_payload = session.exec(select(Payload).where(Payload.identifier == identifier)).first()
+    if existing_payload:
+        return {"identifier": existing_payload.identifier}
+    
+    new_payload = Payload(identifier=identifier, output=interleaved_result)
+    session.add(new_payload)
+    session.commit()
+    return {"identifier": identifier}
 
 @app.get("/payload/{identifier}")
 def read_payload(identifier: str, session: Session = Depends(get_session)):
-    pass
+    payload = session.exec(select(Payload).where(Payload.identifier == identifier)).first()
+    if not payload:
+        raise HTTPException(status_code=404, detail="Payload not found.")
+    return {"output": payload.output}
