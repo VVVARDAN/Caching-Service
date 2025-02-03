@@ -1,13 +1,15 @@
-from fastapi import FastAPI, HTTPException, Depends
-from sqlmodel import SQLModel, Session, create_engine, select
-from pydantic import BaseModel
+"""
+Required tools for fastapi, db and hashing
+"""
+from hashlib import md5
 from typing import List
-import hashlib
-from sqlmodel import Field
+from fastapi import FastAPI, HTTPException, Depends
+from sqlmodel import SQLModel, Session, create_engine, select, Field
+from pydantic import BaseModel
 
 # Database setup
-database_url = "sqlite:///./cache.db"
-engine = create_engine(database_url, echo=True)
+DATABASE_URL = "sqlite:///./cache.db"
+engine = create_engine(DATABASE_URL, echo=True)
 
 class CachedResult(SQLModel, table=True):
     """
@@ -35,6 +37,8 @@ def get_session():
     with Session(engine) as session:
         yield session
 
+
+# Initialize FastAPI application
 app = FastAPI()
 
 # Transformer function (Simulating an external service)
@@ -97,7 +101,7 @@ def create_payload(request: PayloadRequest, session: Session = Depends(get_sessi
     transformed_2 = [get_or_cache_transformation(s, session) for s in request.list_2]
     
     interleaved_result = ", ".join(sum(zip(transformed_1, transformed_2), ()))
-    identifier = hashlib.md5(interleaved_result.encode()).hexdigest()
+    identifier = md5(interleaved_result.encode()).hexdigest()
     
     existing_payload = session.exec(select(Payload).where(Payload.identifier == identifier)).first()
     if existing_payload:
