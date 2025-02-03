@@ -10,10 +10,14 @@ database_url = "sqlite:///./cache.db"
 engine = create_engine(database_url, echo=True)
 
 class CachedResult(SQLModel, table=True):
-    pass
+    id: int | None = None
+    input_string: str
+    transformed_string: str
 
 class Payload(SQLModel, table=True):
-    pass
+    id: int | None = None
+    identifier: str
+    output: str
 
 SQLModel.metadata.create_all(engine)
 
@@ -29,7 +33,9 @@ def transformer_function(input_string: str) -> str:
 
 # Request Model
 class PayloadRequest(BaseModel):
-    pass
+    '''Request Model'''
+    list_1: List[str]
+    list_2: List[str]
 
 # Caching function
 def get_or_cache_transformation(input_string: str, session: Session) -> str:
