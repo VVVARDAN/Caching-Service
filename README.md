@@ -84,7 +84,7 @@ API is accessible at: [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ## 🧪 Running Tests
 ```sh
-pytest test_main.py
+pytest test_api.py
 ```
 
 ## 📦 Deployment
